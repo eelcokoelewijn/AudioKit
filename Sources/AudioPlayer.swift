@@ -1,6 +1,11 @@
 import Foundation
 import AVFoundation
 
+public enum PlayerResult {
+    case success
+    case failure
+}
+
 public protocol AudioPlaying {
     var elapsedTime: ((String) -> ())? { get set }
     var totalLength: ((String) -> ())? { get set }
@@ -8,10 +13,10 @@ public protocol AudioPlaying {
     var playerReady: (() -> ())? { get set }
     var isPlaying: Bool { get }
     
-    func configure(url: URL, completion: ((Result<Bool>) -> ())?)
+    func configure(url: URL, completion: ((PlayerResult) -> ())?)
     func play()
     func pause()
-    func prepare(audioFilePath path: URL, completion: ((Result<Bool>) -> ())?, stopped: (() -> ())?)
+    func prepare(audioFilePath path: URL, completion: ((PlayerResult) -> ())?, stopped: (() -> ())?)
 }
 
 public class AudioPlayer: AudioPlaying {
@@ -55,7 +60,7 @@ public class AudioPlayer: AudioPlaying {
         cleanUpAudioSession()
     }
     
-    public func configure(url: URL, completion: ((Result<Bool>) -> ())?) {
+    public func configure(url: URL, completion: ((PlayerResult) -> ())?) {
         DispatchQueue.global().async { [weak self] in
             guard let playerNode = self?.playerNode,
                   let mixer = self?.mixer else { return }
@@ -83,13 +88,13 @@ public class AudioPlayer: AudioPlaying {
                 try self?.engine.start()
                 DispatchQueue.main.async {
                     if let f = completion {
-                        f(.success(true))
+                        f(.success)
                     }
                 }
             } catch {
                 DispatchQueue.main.async {
                     if let f = completion {
-                        f(.success(false))
+                        f(.failure)
                     }
                 }
             }
@@ -107,7 +112,7 @@ public class AudioPlayer: AudioPlaying {
         playerNode.pause()
     }
     
-    public func prepare(audioFilePath path: URL, completion: ((Result<Bool>) -> ())?, stopped: (() -> ())?) {
+    public func prepare(audioFilePath path: URL, completion: ((PlayerResult) -> ())?, stopped: (() -> ())?) {
         DispatchQueue.global().async { [weak self] in
             self?.playerNode.reset()
             self?.playerNode.stop()
@@ -124,7 +129,7 @@ public class AudioPlayer: AudioPlaying {
             self?.playerNode.prepare(withFrameCount: 1)
             DispatchQueue.main.async {
                 if let f = completion {
-                    f(.success(true))
+                    f(.success)
                 }
             }
         }

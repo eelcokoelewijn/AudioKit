@@ -107,7 +107,7 @@ public class PlayerController: NSObject, AudioPlaying {
         player.pause()
     }
     
-    public func configure(url: URL, completion: ((Result<Bool>) -> ())?) {
+    public func configure(url: URL, completion: ((PlayerResult) -> ())?) {
         prepareAudioSession()
         
         addObserver(self, forKeyPath: #keyPath(PlayerController.player.currentItem.duration),
@@ -134,7 +134,7 @@ public class PlayerController: NSObject, AudioPlaying {
         }
     }
     
-    public func prepare(audioFilePath path: URL, completion: ((Result<Bool>) -> ())?, stopped:   (() -> ())?) {
+    public func prepare(audioFilePath path: URL, completion: ((PlayerResult) -> ())?, stopped:   (() -> ())?) {
         asset = AVURLAsset(url: path)
     }
     

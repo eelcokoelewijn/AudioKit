@@ -3,12 +3,12 @@ import AVFoundation
 import UIKit
 
 public class PlayerController: NSObject, AudioPlaying {
-    public var elapsedTime: ((String) -> ())?
-    public var totalLength: ((String) -> ())?
-    public var progress: ((Double, Double) -> ())?
-    public var playerReady: (() -> ())?
+    public var elapsedTime: ((String) -> Void)?
+    public var totalLength: ((String) -> Void)?
+    public var progress: ((Double, Double) -> Void)?
+    public var playerReady: (() -> Void)?
     public var isPlaying: Bool = false
-    
+
     /*
      A formatter for individual date components used to provide an appropriate
      value for the `startTimeLabel` and `durationLabel`.
@@ -17,10 +17,10 @@ public class PlayerController: NSObject, AudioPlaying {
         let formatter = DateComponentsFormatter()
         formatter.zeroFormattingBehavior = .pad
         formatter.allowedUnits = [.minute, .second]
-        
+
         return formatter
     }()
-    
+
     private var playerKVOContext = 0
     @objc private let player = AVPlayer()
 
@@ -53,11 +53,11 @@ public class PlayerController: NSObject, AudioPlaying {
     private var asset: AVURLAsset? {
         didSet {
             guard let newAsset = asset else { return }
-            
+
             asynchronouslyLoadURLAsset(newAsset)
         }
     }
-    
+
     // Attempt load and test these asset keys before playing.
     public static let assetKeysRequiredToPlay = [
         "playable",
@@ -69,7 +69,7 @@ public class PlayerController: NSObject, AudioPlaying {
      method.
      */
     private var timeObserverToken: Any?
-    
+
     private var playerItem: AVPlayerItem? = nil {
         didSet {
             /*
@@ -79,7 +79,7 @@ public class PlayerController: NSObject, AudioPlaying {
             player.replaceCurrentItem(with: self.playerItem)
         }
     }
-    
+
     deinit {
         if let timeObserverToken = timeObserverToken {
             player.removeTimeObserver(timeObserverToken)
@@ -93,23 +93,23 @@ public class PlayerController: NSObject, AudioPlaying {
         removeObserver(self, forKeyPath: #keyPath(PlayerController.player.rate), context: &playerKVOContext)
         removeObserver(self, forKeyPath: #keyPath(PlayerController.player.currentItem.status),
                        context: &playerKVOContext)
-        
+
         cleanUpAudioSession()
     }
-    
+
     public func play() {
         isPlaying = true
         player.play()
     }
-    
+
     public func pause() {
         isPlaying = false
         player.pause()
     }
-    
-    public func configure(url: URL, completion: ((PlayerResult) -> ())?) {
+
+    public func configure(url: URL, completion: ((PlayerResult) -> Void)?) {
         prepareAudioSession()
-        
+
         addObserver(self, forKeyPath: #keyPath(PlayerController.player.currentItem.duration),
                     options: [.new, .initial], context: &playerKVOContext)
         addObserver(self, forKeyPath: #keyPath(PlayerController.player.rate),
@@ -121,8 +121,8 @@ public class PlayerController: NSObject, AudioPlaying {
 
         // Make sure we don't have a strong reference cycle by only capturing self as weak.
         let interval = CMTimeMake(1, 1)
-        timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval, queue: DispatchQueue.main) {
-            [unowned self] time in
+        timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval,
+                                                           queue: DispatchQueue.main) { [unowned self] time in
                 let timeElapsed = CMTimeGetSeconds(time)
                 if let f = self.elapsedTime {
                     f(self.createTimeString(time: Float(timeElapsed)))
@@ -133,18 +133,18 @@ public class PlayerController: NSObject, AudioPlaying {
                 }
         }
     }
-    
-    public func prepare(audioFilePath path: URL, completion: ((PlayerResult) -> ())?, stopped:   (() -> ())?) {
+
+    public func prepare(audioFilePath path: URL, completion: ((PlayerResult) -> Void)?, stopped:   (() -> Void)?) {
         asset = AVURLAsset(url: path)
     }
-    
+
     // MARK: - KVO Observation
-    
+
     // Update our UI when player or `player.currentItem` changes.
     override public func observeValue(forKeyPath keyPath: String?,
-                               of object: Any?,
-                               change: [NSKeyValueChangeKey: Any]?,
-                               context: UnsafeMutableRawPointer?) {
+                                      of object: Any?,
+                                      change: [NSKeyValueChangeKey: Any]?,
+                                      context: UnsafeMutableRawPointer?) {
         // Make sure the this KVO callback was intended for this view controller.
         guard context == &playerKVOContext else {
             super.observeValue(forKeyPath: keyPath, of: object, change: change, context: context)
@@ -161,37 +161,29 @@ public class PlayerController: NSObject, AudioPlaying {
             let newDuration: CMTime
             if let newDurationAsValue = change?[NSKeyValueChangeKey.newKey] as? NSValue {
                 newDuration = newDurationAsValue.timeValue
-            }
-            else {
+            } else {
                 newDuration = kCMTimeZero
             }
-            
+
             let hasValidDuration = newDuration.isNumeric && newDuration.value != 0
             let newDurationSeconds = hasValidDuration ? CMTimeGetSeconds(newDuration) : 0.0
-            
 
             if let f = totalLength {
                 f(createTimeString(time: Float(newDurationSeconds)))
             }
-                    }
-        else if keyPath == #keyPath(PlayerController.player.rate) {
-    
+        } else if keyPath == #keyPath(PlayerController.player.rate) {
             // let newRate = (change?[NSKeyValueChangeKey.newKey] as! NSNumber).doubleValue
-
-        }
-        else if keyPath == #keyPath(PlayerController.player.currentItem.status) {
+        } else if keyPath == #keyPath(PlayerController.player.currentItem.status) {
             // Display an error if status becomes `.Failed`.
-
             let newStatus: AVPlayerItemStatus
 
             if let newStatusAsNumber = change?[NSKeyValueChangeKey.newKey] as? NSNumber {
                 newStatus = AVPlayerItemStatus(rawValue: newStatusAsNumber.intValue)!
                 if let f = playerReady,
-                   AVPlayerItemStatus.readyToPlay == newStatus {
+                    AVPlayerItemStatus.readyToPlay == newStatus {
                     f()
                 }
-            }
-            else {
+            } else {
                 newStatus = .unknown
             }
 
@@ -200,7 +192,7 @@ public class PlayerController: NSObject, AudioPlaying {
             }
         }
     }
-    
+
     // MARK: - Asset Loading
 
     public func asynchronouslyLoadURLAsset(_ newAsset: AVURLAsset) {
@@ -248,25 +240,24 @@ public class PlayerController: NSObject, AudioPlaying {
             }
         }
     }
-    
-    
+
     // Trigger KVO for anyone observing our properties affected by player and player.currentItem
     override public class func keyPathsForValuesAffectingValue(forKey key: String) -> Set<String> {
         let affectedKeyPathsMappingByKey: [String: Set<String>] = [
             "duration": [#keyPath(player.currentItem.duration)],
             "rate": [#keyPath(player.rate)]
         ]
-        
+
         return affectedKeyPathsMappingByKey[key] ?? super.keyPathsForValuesAffectingValue(forKey: key)
     }
-    
+
     private func createTimeString(time: Float) -> String {
         let components = NSDateComponents()
         components.second = Int(max(0.0, time))
 
         return timeRemainingFormatter.string(from: components as DateComponents)!
     }
-    
+
     @discardableResult private func prepareAudioSession() -> Bool {
         let avs = AVAudioSession.sharedInstance()
         do {
@@ -277,7 +268,7 @@ public class PlayerController: NSObject, AudioPlaying {
         }
         return true
     }
-    
+
     @discardableResult private func cleanUpAudioSession() -> Bool {
         let avs = AVAudioSession.sharedInstance()
         do {
@@ -287,5 +278,5 @@ public class PlayerController: NSObject, AudioPlaying {
         }
         return true
     }
-    
+
 }

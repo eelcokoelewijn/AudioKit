@@ -6,14 +6,14 @@ public class AudioPlayer: AudioPlaying {
     private let playerNode: AVAudioPlayerNode
     private let mixer: AVAudioMixerNode
     private var audio: AVAudioFile?
-    public var elapsedTime: ((String) -> ())?
-    public var totalLength: ((String) -> ())?
-    public var progress: ((_ elapsedTime: Double, _ totalLength: Double) -> ())?
-    public var playerReady: (() -> ())?
+    public var elapsedTime: ((String) -> Void)?
+    public var totalLength: ((String) -> Void)?
+    public var progress: ((_ elapsedTime: Double, _ totalLength: Double) -> Void)?
+    public var playerReady: (() -> Void)?
     public var isPlaying: Bool {
         return playerNode.isPlaying
     }
-    
+
     /*
      A formatter for individual date components used to provide an appropriate
      value for the `startTimeLabel` and `durationLabel`.
@@ -22,16 +22,16 @@ public class AudioPlayer: AudioPlaying {
         let formatter = DateComponentsFormatter()
         formatter.zeroFormattingBehavior = .pad
         formatter.allowedUnits = [.minute, .second]
-        
+
         return formatter
     }()
-    
+
     init() {
         engine = AVAudioEngine()
         playerNode = AVAudioPlayerNode()
         mixer = engine.mainMixerNode
     }
-    
+
     deinit {
         audio = nil
         playerNode.stop()
@@ -41,8 +41,8 @@ public class AudioPlayer: AudioPlaying {
         engine.stop()
         cleanUpAudioSession()
     }
-    
-    public func configure(url: URL, completion: ((PlayerResult) -> ())?) {
+
+    public func configure(url: URL, completion: ((PlayerResult) -> Void)?) {
         DispatchQueue.global().async { [weak self] in
             guard let playerNode = self?.playerNode,
                   let mixer = self?.mixer else { return }
@@ -51,7 +51,7 @@ public class AudioPlayer: AudioPlaying {
             self?.engine.inputNode?.installTap(onBus: 0,
                                          bufferSize: 1024,
                                          format: mixer.inputFormat(forBus: 0),
-                                         block: { [weak self] (b: AVAudioPCMBuffer, at: AVAudioTime) in
+                                         block: { [weak self] (_, _) in
                                             if let closure = self?.elapsedTime,
                                                 let currentTime = self?.currentTime(),
                                                 let _ = self?.totalTime(),
@@ -82,19 +82,19 @@ public class AudioPlayer: AudioPlaying {
             }
         }
     }
-    
+
     public func play() {
         playerNode.play()
         if let closure = totalLength {
             closure(totalTime())
         }
     }
-    
+
     public func pause() {
         playerNode.pause()
     }
-    
-    public func prepare(audioFilePath path: URL, completion: ((PlayerResult) -> ())?, stopped: (() -> ())?) {
+
+    public func prepare(audioFilePath path: URL, completion: ((PlayerResult) -> Void)?, stopped: (() -> Void)?) {
         DispatchQueue.global().async { [weak self] in
             self?.playerNode.reset()
             self?.playerNode.stop()
@@ -116,7 +116,7 @@ public class AudioPlayer: AudioPlaying {
             }
         }
     }
-    
+
     private func totalTime() -> String {
         if let nodeTime: AVAudioTime = playerNode.lastRenderTime,
             let playerTime: AVAudioTime = playerNode.playerTime(forNodeTime: nodeTime),
@@ -125,7 +125,7 @@ public class AudioPlayer: AudioPlaying {
         }
         return "0:00"
     }
-    
+
     private func currentTime() -> String {
         if let nodeTime: AVAudioTime = playerNode.lastRenderTime,
             let playerTime: AVAudioTime = playerNode.playerTime(forNodeTime: nodeTime) {
@@ -133,14 +133,14 @@ public class AudioPlayer: AudioPlaying {
         }
         return "0:00"
     }
-    
+
     private func createTimeString(time: Float) -> String {
         let components = NSDateComponents()
         components.second = Int(max(0.0, time))
-        
+
         return timeRemainingFormatter.string(from: components as DateComponents)!
     }
-    
+
     @discardableResult private func prepareAudioSession() -> Bool {
         let avs = AVAudioSession.sharedInstance()
         do {
@@ -151,7 +151,7 @@ public class AudioPlayer: AudioPlaying {
         }
         return true
     }
-    
+
     @discardableResult private func cleanUpAudioSession() -> Bool {
         let avs = AVAudioSession.sharedInstance()
         do {
@@ -162,4 +162,3 @@ public class AudioPlayer: AudioPlaying {
         return true
     }
 }
-

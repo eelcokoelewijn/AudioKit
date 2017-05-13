@@ -8,10 +8,9 @@ class AudioKitTests: XCTestCase {
         XCTAssertEqual(AudioKit().text, "Hello, World!")
     }
 
-
-    static var allTests : [(String, (AudioKitTests) -> () throws -> Void)] {
+    static var allTests: [(String, (AudioKitTests) -> () throws -> Void)] {
         return [
-            ("testExample", testExample),
+            ("testExample", testExample)
         ]
     }
 }

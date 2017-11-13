@@ -35,7 +35,7 @@ public class AudioPlayer: AudioPlaying {
     deinit {
         audio = nil
         playerNode.stop()
-        engine.inputNode?.removeTap(onBus: 0)
+        engine.inputNode.removeTap(onBus: 0)
         engine.disconnectNodeInput(playerNode)
         engine.detach(playerNode)
         engine.stop()
@@ -48,13 +48,13 @@ public class AudioPlayer: AudioPlaying {
                   let mixer = self?.mixer else { return }
             self?.engine.attach(playerNode)
             self?.engine.connect(playerNode, to: mixer, format: nil)
-            self?.engine.inputNode?.installTap(onBus: 0,
+            self?.engine.inputNode.installTap(onBus: 0,
                                          bufferSize: 1024,
                                          format: mixer.inputFormat(forBus: 0),
                                          block: { [weak self] (_, _) in
                                             if let closure = self?.elapsedTime,
                                                 let currentTime = self?.currentTime(),
-                                                let _ = self?.totalTime(),
+                                                self?.totalTime() != nil,
                                                 let isPlaying = self?.playerNode.isPlaying,
                                                 isPlaying {
                                                 DispatchQueue.main.async {

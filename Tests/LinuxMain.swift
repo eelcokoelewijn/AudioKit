@@ -1,6 +1,7 @@
 import XCTest
-@testable import AudioKitTests
 
-XCTMain([
-     testCase(AudioKitTests.allTests)
-])
+import AudioKitTests
+
+var tests = [XCTestCaseEntry]()
+tests += AudioKitTests.allTests()
+XCTMain(tests)

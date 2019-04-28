@@ -29,8 +29,8 @@ public class PlayerController: NSObject, AudioPlaying {
             return CMTimeGetSeconds(player.currentTime())
         }
         set {
-            let newTime = CMTimeMakeWithSeconds(newValue, 1)
-            player.seek(to: newTime, toleranceBefore: kCMTimeZero, toleranceAfter: kCMTimeZero)
+            let newTime = CMTimeMakeWithSeconds(newValue, preferredTimescale: 1)
+            player.seek(to: newTime, toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero)
         }
     }
 
@@ -111,16 +111,16 @@ public class PlayerController: NSObject, AudioPlaying {
         prepareAudioSession()
 
         addObserver(self, forKeyPath: #keyPath(PlayerController.player.currentItem.duration),
-                    options: [.new, .initial], context: &playerKVOContext)
+                    options: [.new], context: &playerKVOContext)
         addObserver(self, forKeyPath: #keyPath(PlayerController.player.rate),
-                    options: [.new, .initial], context: &playerKVOContext)
+                    options: [.new], context: &playerKVOContext)
         addObserver(self, forKeyPath: #keyPath(PlayerController.player.currentItem.status),
-                    options: [.new, .initial], context: &playerKVOContext)
+                    options: [.new], context: &playerKVOContext)
 
         asset = AVURLAsset(url: url)
 
         // Make sure we don't have a strong reference cycle by only capturing self as weak.
-        let interval = CMTimeMake(1, 1)
+        let interval = CMTimeMake(value: 1, timescale: 1)
         timeObserverToken = player.addPeriodicTimeObserver(forInterval: interval,
                                                            queue: DispatchQueue.main) { [unowned self] time in
                 let timeElapsed = CMTimeGetSeconds(time)
@@ -162,7 +162,7 @@ public class PlayerController: NSObject, AudioPlaying {
             if let newDurationAsValue = change?[NSKeyValueChangeKey.newKey] as? NSValue {
                 newDuration = newDurationAsValue.timeValue
             } else {
-                newDuration = kCMTimeZero
+                newDuration = CMTime.zero
             }
 
             let hasValidDuration = newDuration.isNumeric && newDuration.value != 0
@@ -175,12 +175,12 @@ public class PlayerController: NSObject, AudioPlaying {
             // let newRate = (change?[NSKeyValueChangeKey.newKey] as! NSNumber).doubleValue
         } else if keyPath == #keyPath(PlayerController.player.currentItem.status) {
             // Display an error if status becomes `.Failed`.
-            let newStatus: AVPlayerItemStatus
+            let newStatus: AVPlayerItem.Status
 
             if let newStatusAsNumber = change?[NSKeyValueChangeKey.newKey] as? NSNumber {
-                newStatus = AVPlayerItemStatus(rawValue: newStatusAsNumber.intValue)!
+                newStatus = AVPlayerItem.Status(rawValue: newStatusAsNumber.intValue)!
                 if let f = playerReady,
-                    AVPlayerItemStatus.readyToPlay == newStatus {
+                    AVPlayerItem.Status.readyToPlay == newStatus {
                     f()
                 }
             } else {
@@ -261,7 +261,7 @@ public class PlayerController: NSObject, AudioPlaying {
     @discardableResult private func prepareAudioSession() -> Bool {
         let avs = AVAudioSession.sharedInstance()
         do {
-            try avs.setCategory(AVAudioSessionCategoryPlayback, with: .defaultToSpeaker)
+            try avs.setCategory(.playback)
             try avs.setActive(true)
         } catch {
             return false

@@ -144,7 +144,7 @@ public class AudioPlayer: AudioPlaying {
     @discardableResult private func prepareAudioSession() -> Bool {
         let avs = AVAudioSession.sharedInstance()
         do {
-            try avs.setCategory(AVAudioSessionCategoryPlayback, with: .defaultToSpeaker)
+            try avs.setCategory(.playback)
             try avs.setActive(true)
         } catch {
             return false
